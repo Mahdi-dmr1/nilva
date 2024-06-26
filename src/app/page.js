@@ -1,113 +1,198 @@
+"use client";
+
+import PropTypes from "prop-types";
+import useSkillStore from "@/store";
+//Dnd kit
+import {
+	DndContext,
+	MouseSensor,
+	TouchSensor,
+	closestCenter,
+	useSensor,
+	useSensors,
+} from "@dnd-kit/core";
+
+import { useEffect, useState } from "react";
+import {
+	SortableContext,
+	arrayMove,
+	rectSortingStrategy,
+	sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import DraggableElement from "@/components/DraggableElement";
 import Image from "next/image";
 
-export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+export default function Home({
+	items,
+	cols,
+	limit_Items_Max,
+	limit_Items_Min,
+	dndStatus,
+}) {
+	//getting needed states from our store
+	const { skills, removeSkill, addSkill } = useSkillStore((state) => ({
+		skills: state.skills,
+		removeSkill: state.removeSkill,
+		addSkill: state.addSkill,
+	}));
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+	//state in which our selected icons which are also draggable are stored into
+	const [draggingSkills, setDraggingSkills] = useState([]);
 
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+	//when the user clicks on the green add button this gets invoked
+	const handleSkillSubmit = (avatar, key, desc) => {
+		if (skills.length < limit_Items_Max) {
+			addSkill({
+				id: key,
+				desc: desc,
+				title: avatar,
+			});
+		} else {
+			console.log("skill set is full");
+		}
+	};
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
+	//handling when remove button is pressed
+	const handleRemoveSkill = (id) => {
+		removeSkill(id);
+	};
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
+	useEffect(() => {
+		setDraggingSkills(skills);
+	}, [skills]);
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  );
+	//Submit form function gets invoked when clicked
+	const handleFullFormSunmition = () => {
+		console.log("skills saved successfully!!");
+	};
+
+	//drag and drop
+	const handleDragEnd = (event) => {
+		const { active, over } = event;
+
+		const getTaskPos = (id) =>
+			draggingSkills.findIndex((item) => item.id === id);
+		if (active.id !== over.id) {
+			setDraggingSkills((items) => {
+				const oldIndex = getTaskPos(active.id);
+				const newIndex = getTaskPos(over.id);
+				console.log(oldIndex);
+				console.log(newIndex);
+				return arrayMove(items, oldIndex, newIndex);
+			});
+		}
+	};
+	const sensors = useSensors(useSensor(TouchSensor), useSensor(MouseSensor));
+
+	//Grid for items
+	const getGridClasses = () => {
+		if (cols === "auto") {
+			return "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4";
+		} else if (cols === "custom") {
+			return "flex flex-wrap justify-around gap-6";
+		} else {
+			return `grid ${cols} gap-4`;
+		}
+	};
+
+	return (
+		<div className="h-lvh   w-full bg-gray-200 flex  justify-center items-center">
+			<div className=" max-w-6xl overflow-x-hidden overflow-y-scroll h-lvh w-full sm:px-10 py-8 shadow-lg flex flex-col">
+				<div className="flex justify-center">
+					<h1 className="text-center mb-5 text-xl font-semibold">
+						drag and drop
+					</h1>
+				</div>
+
+				<div className="border border-dotted border-gray-400 w-full p-6  rounded-lg flex justify-center">
+					<div className={getGridClasses()}>
+						<DndContext
+							sensors={sensors}
+							onDragEnd={handleDragEnd}
+							collisionDetection={closestCenter}>
+							<SortableContext
+								items={draggingSkills}
+								strategy={rectSortingStrategy}>
+								{draggingSkills.map((skill, i) => (
+									<div key={i} style={{ touchAction: "manipulation" }}>
+										{dndStatus[skill.desc] ? (
+											<DraggableElement
+												handleRemoveSkill={handleRemoveSkill}
+												key={i}
+												id={skill.id}
+												title={skill.title}
+											/>
+										) : (
+											<div className="flex justify-between">
+												<div>
+													<button
+														onClick={"() => removeSkill(skill.id)"}
+														className="bg-gray-500 px-[6.5px] py-[0px]  flex items-center rounded-full text-sm  translate-x-20 translate-y-3 z-40">
+														-
+													</button>
+													<div className=" border border-dotted border-gray-300 sm:p-6 p-3 bg-gray-300  rounded-xl">
+														<div className="w-12">
+															<Image src={skill.title} />
+														</div>
+													</div>
+												</div>
+											</div>
+										)}
+									</div>
+								))}
+							</SortableContext>
+						</DndContext>
+					</div>
+				</div>
+				<h1 className="mt-10 text-xl text-center font-semibold">Skills</h1>
+				<div className="mt-10 flex justify-center">
+					<div className={getGridClasses()}>
+						{items?.map((item, i) => (
+							<div key={i}>
+								<div className="flex items-center justify-center ">
+									<div className="w-20">
+										<Image src={item.icon} width={200} height={200} />
+									</div>
+								</div>
+								<button
+									disabled={skills.some((info) => info.id === item.key)}
+									onClick={() =>
+										handleSkillSubmit(item.icon, item.key, item.desc)
+									}
+									className="bg-green-500 px-[6px] py-[0px]  flex items-center rounded-full text-sm  translate-x-20 -translate-y-20 disabled:bg-gray-400">
+									+
+								</button>
+								<div>
+									<h1 className="text-gray-500 text-center">{item.desc}</h1>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+				<div className="w-full flex flex-col justify-center items-center mt-10">
+					<button
+						onClick={handleFullFormSunmition}
+						disabled={draggingSkills.length < limit_Items_Min ? true : false}
+						className="text-semibold bg-blue-500 py-2 px-4 rounded-full text-white">
+						submit
+					</button>
+				</div>
+			</div>
+		</div>
+	);
 }
+
+Home.propTypes = {
+	items: PropTypes.arrayOf(
+		PropTypes.shape({
+			icon: PropTypes.element.isRequired,
+			key: PropTypes.number.isRequired,
+			desc: PropTypes.string.isRequired,
+		})
+	).isRequired,
+	cols: PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf(["auto"])])
+		.isRequired,
+	limit_Items_Max: PropTypes.number.isRequired,
+	limit_Items_Min: PropTypes.number.isRequired,
+	dndStatus: PropTypes.object.isRequired,
+};
